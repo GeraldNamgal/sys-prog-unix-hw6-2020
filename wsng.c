@@ -10,6 +10,20 @@
 #include	<sys/param.h>
 #include	<signal.h>
 #include	"socklib.h"
+#include    <time.h>
+
+struct file_info {
+    char* extension;
+    char* content;
+};
+
+struct file_info content_types[] = {
+    { "html", "text/html" },
+    { "jpg", "image/jpeg" },
+    { "jpeg", "image/jpeg" },
+    { "gif", "image/gif" },
+    { NULL, NULL }
+};
 
 /*
  * ws.c - a web server
@@ -379,7 +393,21 @@ void
 header( FILE *fp, int code, char *msg, char *content_type )
 {
 	fprintf(fp, "HTTP/1.0 %d %s\r\n", code, msg);
-	if ( content_type )
+
+    time_t t; 
+    time(&t);
+    fprintf(fp, "Date: %s", ctime(&t) );
+    
+    char* web_server_name = full_hostname();
+    char arr[ strlen( web_server_name ) + 1 ];    
+    for (int i = 0; i < strlen( web_server_name ); i++)
+        arr[i] = web_server_name[i];
+    arr[strlen( web_server_name )] = '\0';
+    fprintf(fp, "Name: %s\r\n", arr);
+    
+    fprintf(fp, "Version: %s\r\n", VERSION);
+	
+    if ( content_type )
 		fprintf(fp, "Content-Type: %s\r\n", content_type );
 }
 
@@ -504,14 +532,13 @@ do_cat(char *f, FILE *fpsock)
 	FILE	*fpfile;
 	int	c;
 
-	if ( strcmp(extension,"html") == 0 )
-		content = "text/html";
-	else if ( strcmp(extension, "gif") == 0 )
-		content = "image/gif";
-	else if ( strcmp(extension, "jpg") == 0 )
-		content = "image/jpeg";
-	else if ( strcmp(extension, "jpeg") == 0 )
-		content = "image/jpeg";
+    for ( int i = 0; content_types[i].extension != NULL; i++ )
+    {
+        if ( strcmp( extension, content_types[i].extension ) == 0 ) {
+            content = content_types[i].content;
+            break;
+        }        
+    }
 
 	fpfile = fopen( f , "r");
 	if ( fpfile != NULL )
