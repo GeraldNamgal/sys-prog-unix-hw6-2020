@@ -1,3 +1,14 @@
+// Gerald Arocena
+// CSCI E-28, Spring 2020
+// 
+// hw 6
+
+/* *
+ * wsng
+ * 
+ * note: code is built from starter code given in assignment instructions
+ */
+
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	<strings.h>
@@ -18,10 +29,6 @@ struct file_info {
 };
 
 struct file_info content_types[] = {
-    { "html", "text/html" },
-    { "jpg", "image/jpeg" },
-    { "jpeg", "image/jpeg" },
-    { "gif", "image/gif" },
     { NULL, NULL }
 };
 
@@ -52,12 +59,16 @@ struct file_info content_types[] = {
 #define	LINELEN		1024
 #define	PARAM_LEN	128
 #define	VALUE_LEN	512
+#define MAX_ARGS    2
 
 char	myhost[MAXHOSTNAMELEN];
 int	myport;
 char	*full_hostname();
+int     add_to_table( char*, char* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
+#define NUM_ELEMS(x)  (sizeof(x) / sizeof((x)[0])) /* referenced https://stackov
+erflow.com/questions/37538/how-do-i-determine-the-size-of-my-array-in-c */
 
 /*
  * prototypes
@@ -253,9 +264,9 @@ void process_config_file(char *conf_file, int *portnump)
 	FILE	*fp;
 	char	rootdir[VALUE_LEN] = SERVER_ROOT;
 	char	param[PARAM_LEN];
-	char	value[VALUE_LEN];
+	char	value[MAX_ARGS][VALUE_LEN];
 	int	port;
-	int	read_param(FILE *, char *, int, char *, int );
+	int	read_param(FILE *, char *, int, char [MAX_ARGS][VALUE_LEN], int );
 
 	/* open the file */
 	if ( (fp = fopen(conf_file,"r")) == NULL )
@@ -265,9 +276,11 @@ void process_config_file(char *conf_file, int *portnump)
 	while( read_param(fp, param, PARAM_LEN, value, VALUE_LEN) != EOF )
 	{
 		if ( strcasecmp(param,"server_root") == 0 )
-			strcpy(rootdir, value);
+			strcpy(rootdir, value[0]);
 		if ( strcasecmp(param,"port") == 0 )
-			port = atoi(value);
+			port = atoi(value[0]);
+        if ( strcasecmp(param,"type") == 0 )
+            add_to_table(value[0], value[1]);
 	}
 	fclose(fp);
 
@@ -278,23 +291,44 @@ void process_config_file(char *conf_file, int *portnump)
 	return;
 }
 
+/* *
+ *
+ * note: referenced https://stackoverflow.com/questions/37538/how-do-i-
+ *                  determine-the-size-of-my-array-in-c
+ */
+int add_to_table( char* extension, char* content )
+{
+    struct file_info new_entry = {extension, content}; // create file info entry
+    size_t num_elems = NUM_ELEMS(content_types);      // get size of table array
+    struct file_info new_table[num_elems + 1];         // create new table array
+    for (int i = 0; content_types[i].content != NULL; i++) {  // copy old to new
+        new_table[i].content = content_types[i].content;
+        new_table[i].extension = content_types[i].extension;
+    }
+    new_table[num_elems - 1] = new_entry;                       // add new entry
+    content_types = new_table;                                   // update table
+
+    return 1;  // return success
+}
+
 /*
  * read_param:
  *   purpose -- read next parameter setting line from fp
  *   details -- a param-setting line looks like  name value
  *		for example:  port 4444
  *     extra -- skip over lines that start with # and those
- *		that do not contain two strings
+ *		that do not contain two or more strings
  *   returns -- EOF at eof and 1 on good data
  *
  */
-int read_param(FILE *fp, char *name, int nlen, char* value, int vlen)
+int read_param(FILE *fp, char *name, int nlen, char value[MAX_ARGS][VALUE_LEN]
+                , int vlen)
 {
 	char	line[LINELEN];
 	int	c;
 	char	fmt[100] ;
 
-	sprintf(fmt, "%%%ds%%%ds", nlen, vlen);
+	sprintf(fmt, "%%%ds%%%ds%%%ds", nlen, vlen, vlen);
 
 	/* read in next line and if the line is too long, read until \n */
 	while( fgets(line, LINELEN, fp) != NULL )
@@ -302,7 +336,7 @@ int read_param(FILE *fp, char *name, int nlen, char* value, int vlen)
 		if ( line[strlen(line)-1] != '\n' )
 			while( (c = getc(fp)) != '\n' && c != EOF )
 				;
-		if ( sscanf(line, fmt, name, value ) == 2 && *name != '#' )
+		if ( sscanf(line, fmt, name, value[0], value[1] ) >= 2 && *name != '#' )
 			return 1;
 	}
 	return EOF;
