@@ -23,15 +23,6 @@
 #include	"socklib.h"
 #include    <time.h>
 
-struct file_info {
-    char* extension;
-    char* content;
-};
-
-struct file_info content_types[] = {
-    { NULL, NULL }
-};
-
 /*
  * ws.c - a web server
  *
@@ -67,8 +58,14 @@ char	*full_hostname();
 int     add_to_table( char*, char* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
-#define NUM_ELEMS(x)  (sizeof(x) / sizeof((x)[0])) /* referenced https://stackov
-erflow.com/questions/37538/how-do-i-determine-the-size-of-my-array-in-c */
+
+typedef struct file_info {
+    char extension[VALUE_LEN];
+    char content[VALUE_LEN];
+    struct file_info* next;
+} file_info;
+
+file_info* content_types = NULL;
 
 /*
  * prototypes
@@ -292,21 +289,31 @@ void process_config_file(char *conf_file, int *portnump)
 }
 
 /* *
- *
- * note: referenced https://stackoverflow.com/questions/37538/how-do-i-
- *                  determine-the-size-of-my-array-in-c
+ * TODO: figure out where/when to free the linked list
  */
 int add_to_table( char* extension, char* content )
 {
-    struct file_info new_entry = {extension, content}; // create file info entry
-    size_t num_elems = NUM_ELEMS(content_types);      // get size of table array
-    struct file_info new_table[num_elems + 1];         // create new table array
-    for (int i = 0; content_types[i].content != NULL; i++) {  // copy old to new
-        new_table[i].content = content_types[i].content;
-        new_table[i].extension = content_types[i].extension;
+    file_info* new_entry = (file_info*) malloc(sizeof(file_info));
+    new_entry->next = NULL;
+    for (int i = 0; i < strlen(extension) + 1; i++)
+        new_entry->extension[i] = extension[i];
+    for (int i = 0; i < strlen(content) + 1; i++)
+        new_entry->content[i] = content[i];
+
+    if (content_types == NULL)                        // if linked list is empty
+        content_types = new_entry;                      // new entry is the head
+
+    else {
+        file_info* tmp_ptr = content_types;
+        
+        while ( tmp_ptr != NULL ) {
+            if (tmp_ptr->next == NULL) {
+                tmp_ptr->next = new_entry;
+                break;
+            }
+            tmp_ptr = tmp_ptr->next;
+        }
     }
-    new_table[num_elems - 1] = new_entry;                       // add new entry
-    content_types = new_table;                                   // update table
 
     return 1;  // return success
 }
@@ -566,12 +573,16 @@ do_cat(char *f, FILE *fpsock)
 	FILE	*fpfile;
 	int	c;
 
-    for ( int i = 0; content_types[i].extension != NULL; i++ )
+    file_info* tmp_ptr = content_types;    
+    while ( tmp_ptr != NULL )
     {
-        if ( strcmp( extension, content_types[i].extension ) == 0 ) {
-            content = content_types[i].content;
+        if ( strcmp( extension, content_types->extension ) == 0 )
+        {
+            content = content_types->content;
             break;
-        }        
+        }
+
+        tmp_ptr = tmp_ptr->next;
     }
 
 	fpfile = fopen( f , "r");
