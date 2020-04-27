@@ -65,7 +65,7 @@ typedef struct file_info {
     struct file_info* next;
 } file_info;
 
-file_info* content_types = NULL;
+file_info* content_types = NULL;                          // head of linked list
 
 /*
  * prototypes
@@ -280,6 +280,13 @@ void process_config_file(char *conf_file, int *portnump)
             add_to_table(value[0], value[1]);
 	}
 	fclose(fp);
+
+    // TODO: debugging
+    file_info* tmp_ptr = content_types;
+    while ( tmp_ptr != NULL ) {
+        printf("here %s %s\n", tmp_ptr->extension, tmp_ptr->content);
+        tmp_ptr = tmp_ptr->next;
+    }
 
 	/* act on the settings */
 	if (chdir(rootdir) == -1)
@@ -569,25 +576,36 @@ void
 do_cat(char *f, FILE *fpsock)
 {
 	char	*extension = file_type(f);
-	char	*content = "text/plain";
+	char	*content;
 	FILE	*fpfile;
 	int	c;
 
-    file_info* tmp_ptr = content_types;    
-    while ( tmp_ptr != NULL )
-    {
-        if ( strcmp( extension, content_types->extension ) == 0 )
-        {
-            content = content_types->content;
+    file_info* tmp_ptr = content_types;
+    while ( tmp_ptr != NULL ) {                    // give content default value
+        if ( strcmp( "DEFAULT", tmp_ptr->extension ) == 0 ) {
+            content = tmp_ptr->content;
+
+            // TODO: debugging
+            printf("here default is %s\n", content);
+
             break;
         }
-
         tmp_ptr = tmp_ptr->next;
     }
+    tmp_ptr = content_types;
+    while ( tmp_ptr != NULL ) {                       // is extension in config?
+        if ( strcmp( extension, tmp_ptr->extension ) == 0 ) {
+            content = tmp_ptr->content;             // then change content
 
+            // TODO: debugging
+            printf("here extension is %s\n", content);
+
+            break;
+        }
+        tmp_ptr = tmp_ptr->next;
+    }
 	fpfile = fopen( f , "r");
-	if ( fpfile != NULL )
-	{
+	if ( fpfile != NULL ) {
 		header( fpsock, 200, "OK", content );
 		fprintf(fpsock, "\r\n");
 		while( (c = getc(fpfile) ) != EOF )
