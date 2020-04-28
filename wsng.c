@@ -518,7 +518,7 @@ do_ls(char *dir, FILE *fp)
 {
 	int	fd;	/* file descriptor of stream */
 
-	header(fp, 200, "OK", "text/html");  // TODO: changed from "text/plain"
+	header(fp, 200, "OK", "text/html");       // TODO: changed from "text/plain"
 	fprintf(fp,"\r\n");
 	fflush(fp);
 
@@ -528,7 +528,8 @@ do_ls(char *dir, FILE *fp)
     
     // TODO
     fprintf(fp, "<a href=\"https://www.w3schools.com\">Visit W3Schools.com!</a>\n");
-	
+	fprintf(fp, "%s\n", dir);                            // TODO: dir equals '.'
+
     // TODO: delete when done --
     //execlp("/bin/ls","ls","-l",dir,NULL); 
 	//perror(dir);
