@@ -6,7 +6,7 @@
 /* *
  * wsng
  * 
- * note: code is built from starter code given in assignment instructions
+ * note: builds on 'ws.c' starter code given in assignment instructions
  */
 
 #include	<stdio.h>
@@ -22,6 +22,7 @@
 #include	<signal.h>
 #include	"socklib.h"
 #include    <time.h>
+#include	<dirent.h>
 
 /*
  * ws.c - a web server
@@ -53,9 +54,10 @@
 #define MAX_ARGS    2
 
 char	myhost[MAXHOSTNAMELEN];
-int	myport;
+int	    myport;
 char	*full_hostname();
 int     add_to_table( char*, char* );
+void    traverseDir( char *, DIR **, FILE* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
 
@@ -525,14 +527,68 @@ do_ls(char *dir, FILE *fp)
 	fd = fileno(fp);
 	dup2(fd,1);
 	dup2(fd,2);
-    
-    // TODO
-    fprintf(fp, "<a href=\"https://www.w3schools.com\">Visit W3Schools.com!</a>\n");
-	fprintf(fp, "%s\n", dir);                            // TODO: dir equals '.'
+
+    struct stat info;
+    DIR	*dir_ptr;
+
+    if ( lstat( dir, &info) == -1 ) {	                         // cannot lstat	 
+		fprintf(stderr, "wsng: cannot access '%s': %s\n"            
+                , dir, strerror(errno));                              // say why
+        return;
+    }
+    if ( S_ISDIR( info.st_mode ) ) {                             // if directory   
+        if ( ( dir_ptr = opendir( dir ) ) == NULL ) {     // cannot opendir
+            fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
+                    , dir, strerror(errno));                          // say why
+            return;
+        }
+        else                       
+            traverseDir( dir, &dir_ptr, fp );               
+    }
+
+    // TODO: list directory content (dir equals on start up '.')
+    /*
+        (parent directory goes here)
+        total 52 <-- can omit this
+        drwxr-xr-x 2 garocena dceusers    42 Apr 18  1998 dir1
+        drwxr-xr-x 2 garocena dceusers   115 May  4  2019 dir2
+        drwxr-xr-x 2 garocena dceusers     6 May  6  2010 dir3
+        -rw-r--r-- 1 garocena dceusers   404 Apr 18  1998 file1.html
+        -rw-r--r-- 1 garocena dceusers   402 Apr 18  1998 file2.txt
+        -rw-r--r-- 1 garocena dceusers  9164 Apr 18  1998 file3.jpg
+        -rw-r--r-- 1 garocena dceusers 27122 Apr 18  1998 file4.gif
+        -rw-r--r-- 1 garocena dceusers   406 Apr 29  2002 file_list.html
+        d-wx--x--x 2 garocena dceusers     6 Apr 24 23:14 nor
+        drw-r--r-- 2 garocena dceusers     6 Apr 24 23:14 nox
+    */
+    //fprintf(fp, "<a href=\"https://www.w3schools.com\">");
+    //fprintf(fp, "Visit W3Schools.com!</a><br>\r\n");
 
     // TODO: delete when done --
     //execlp("/bin/ls","ls","-l",dir,NULL); 
 	//perror(dir);
+}
+
+void traverseDir( char *pathname, DIR **dir_ptr, FILE* fp )
+{
+    struct dirent *direntp;		                                   // each entry   
+    
+    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )          // traverse dir        
+    {
+        if ( strcmp( direntp->d_name, "." ) != 0
+              && strcmp( direntp->d_name, ".." ) != 0 )     // skip "." and ".."                                                                  
+        {
+            fprintf(fp, "<a href=\"http://localhost:%d/%s\">", myport
+                    , direntp->d_name);
+            fprintf(fp, "%s</a><br>\r\n", direntp->d_name);
+        } 
+    }
+
+    if ( closedir(*dir_ptr) == -1 )
+    {
+        fprintf(stderr, "wsng: can't close '%s': %s\n"
+                , pathname, strerror(errno));
+    }
 }
 
 /* ------------------------------------------------------ *
