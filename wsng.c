@@ -281,13 +281,6 @@ void process_config_file(char *conf_file, int *portnump)
 	}
 	fclose(fp);
 
-    // TODO: debugging
-    file_info* tmp_ptr = content_types;
-    while ( tmp_ptr != NULL ) {
-        printf("here %s %s\n", tmp_ptr->extension, tmp_ptr->content);
-        tmp_ptr = tmp_ptr->next;
-    }
-
 	/* act on the settings */
 	if (chdir(rootdir) == -1)
 		oops("cannot change to rootdir", 2);
@@ -301,6 +294,10 @@ void process_config_file(char *conf_file, int *portnump)
 int add_to_table( char* extension, char* content )
 {
     file_info* new_entry = (file_info*) malloc(sizeof(file_info));
+    if (new_entry == NULL) {
+        fprintf(stderr, "wsng: malloc failed\n");
+        return 0;                                              // return failure
+    }
     new_entry->next = NULL;
     for (int i = 0; i < strlen(extension) + 1; i++)
         new_entry->extension[i] = extension[i];
@@ -310,7 +307,7 @@ int add_to_table( char* extension, char* content )
     if (content_types == NULL)                        // if linked list is empty
         content_types = new_entry;                      // new entry is the head
 
-    else {
+    else {                                  // else add new entry to end of list
         file_info* tmp_ptr = content_types;
         
         while ( tmp_ptr != NULL ) {
@@ -321,8 +318,7 @@ int add_to_table( char* extension, char* content )
             tmp_ptr = tmp_ptr->next;
         }
     }
-
-    return 1;  // return success
+    return 1;                                                  // return success
 }
 
 /*
@@ -522,15 +518,20 @@ do_ls(char *dir, FILE *fp)
 {
 	int	fd;	/* file descriptor of stream */
 
-	header(fp, 200, "OK", "text/plain");
+	header(fp, 200, "OK", "text/html");  // TODO: changed from "text/plain"
 	fprintf(fp,"\r\n");
 	fflush(fp);
 
 	fd = fileno(fp);
 	dup2(fd,1);
 	dup2(fd,2);
-	execlp("/bin/ls","ls","-l",dir,NULL);
-	perror(dir);
+    
+    // TODO
+    fprintf(fp, "<a href=\"https://www.w3schools.com\">Visit W3Schools.com!</a>\n");
+	
+    // TODO: delete when done --
+    //execlp("/bin/ls","ls","-l",dir,NULL); 
+	//perror(dir);
 }
 
 /* ------------------------------------------------------ *
@@ -584,10 +585,6 @@ do_cat(char *f, FILE *fpsock)
     while ( tmp_ptr != NULL ) {                    // give content default value
         if ( strcmp( "DEFAULT", tmp_ptr->extension ) == 0 ) {
             content = tmp_ptr->content;
-
-            // TODO: debugging
-            printf("here default is %s\n", content);
-
             break;
         }
         tmp_ptr = tmp_ptr->next;
@@ -596,10 +593,6 @@ do_cat(char *f, FILE *fpsock)
     while ( tmp_ptr != NULL ) {                       // is extension in config?
         if ( strcmp( extension, tmp_ptr->extension ) == 0 ) {
             content = tmp_ptr->content;             // then change content
-
-            // TODO: debugging
-            printf("here extension is %s\n", content);
-
             break;
         }
         tmp_ptr = tmp_ptr->next;
