@@ -547,21 +547,6 @@ do_ls(char *dir, FILE *fp)
     }
     if ( closedir(dir_ptr) == -1 )
         fprintf(stderr, "wsng: can't close '%s': %s\n", dir, strerror(errno));
-
-    // TODO: parent directory, file size and mod time need to be added
-    /*
-        total 52 <-- can omit this
-        drwxr-xr-x 2 garocena dceusers    42 Apr 18  1998 dir1
-        drwxr-xr-x 2 garocena dceusers   115 May  4  2019 dir2
-        drwxr-xr-x 2 garocena dceusers     6 May  6  2010 dir3
-        -rw-r--r-- 1 garocena dceusers   404 Apr 18  1998 file1.html
-        -rw-r--r-- 1 garocena dceusers   402 Apr 18  1998 file2.txt
-        -rw-r--r-- 1 garocena dceusers  9164 Apr 18  1998 file3.jpg
-        -rw-r--r-- 1 garocena dceusers 27122 Apr 18  1998 file4.gif
-        -rw-r--r-- 1 garocena dceusers   406 Apr 29  2002 file_list.html
-        d-wx--x--x 2 garocena dceusers     6 Apr 24 23:14 nor
-        drw-r--r-- 2 garocena dceusers     6 Apr 24 23:14 nox
-    */
 }
 
 void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
