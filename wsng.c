@@ -57,7 +57,7 @@ char	myhost[MAXHOSTNAMELEN];
 int	    myport;
 char	*full_hostname();
 int     add_to_table( char*, char* );
-void    traverseDir( char *, DIR **, FILE* );
+void    traverseDir( char *pathname, DIR *, FILE* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
 
@@ -520,7 +520,7 @@ do_ls(char *dir, FILE *fp)
 {
 	int	fd;	/* file descriptor of stream */
 
-	header(fp, 200, "OK", "text/html");       // TODO: changed from "text/plain"
+	header(fp, 200, "OK", "text/html");
 	fprintf(fp,"\r\n");
 	fflush(fp);
 
@@ -537,18 +537,19 @@ do_ls(char *dir, FILE *fp)
         return;
     }
     if ( S_ISDIR( info.st_mode ) ) {                             // if directory   
-        if ( ( dir_ptr = opendir( dir ) ) == NULL ) {     // cannot opendir
+        if ( ( dir_ptr = opendir( dir ) ) == NULL ) {          // cannot opendir
             fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
                     , dir, strerror(errno));                          // say why
             return;
         }
         else                       
-            traverseDir( dir, &dir_ptr, fp );               
+            traverseDir( dir, dir_ptr, fp );               
     }
+    if ( closedir(dir_ptr) == -1 )
+        fprintf(stderr, "wsng: can't close '%s': %s\n", dir, strerror(errno));
 
-    // TODO: list directory content (dir equals on start up '.')
+    // TODO: parent directory, file size and mod time need to be added
     /*
-        (parent directory goes here)
         total 52 <-- can omit this
         drwxr-xr-x 2 garocena dceusers    42 Apr 18  1998 dir1
         drwxr-xr-x 2 garocena dceusers   115 May  4  2019 dir2
@@ -561,34 +562,42 @@ do_ls(char *dir, FILE *fp)
         d-wx--x--x 2 garocena dceusers     6 Apr 24 23:14 nor
         drw-r--r-- 2 garocena dceusers     6 Apr 24 23:14 nox
     */
-    //fprintf(fp, "<a href=\"https://www.w3schools.com\">");
-    //fprintf(fp, "Visit W3Schools.com!</a><br>\r\n");
-
-    // TODO: delete when done --
-    //execlp("/bin/ls","ls","-l",dir,NULL); 
-	//perror(dir);
 }
 
-void traverseDir( char *pathname, DIR **dir_ptr, FILE* fp )
-{
-    struct dirent *direntp;		                                   // each entry   
-    
-    while ( ( direntp = readdir( *dir_ptr ) ) != NULL )          // traverse dir        
-    {
+void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
+{  
+    char pad[] = "style=\"padding:0 5px 0 5px;\"";
+    fprintf(fp, "<table style=\"padding:5px 0 0 0;\">");
+    fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
+    fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);
+
+    struct dirent *direntp;		                                   // each entry
+    while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
         if ( strcmp( direntp->d_name, "." ) != 0
               && strcmp( direntp->d_name, ".." ) != 0 )     // skip "." and ".."                                                                  
-        {
-            fprintf(fp, "<a href=\"http://localhost:%d/%s\">", myport
-                    , direntp->d_name);
-            fprintf(fp, "%s</a><br>\r\n", direntp->d_name);
+        {            
+            fprintf(fp, "<tr><td %s><a href=\"http://localhost:%d/%s\">", pad
+                    ,myport, direntp->d_name);                                  
+            fprintf(fp, "%s</a></td>", direntp->d_name);                 // name
+            char *subpath;                           // get subpath for lstat... 
+            subpath = malloc( strlen(pathname) + strlen(direntp->d_name) + 2 );  
+            if( subpath == NULL ) {                          // if malloc failed
+                fprintf(stderr, "wsng: malloc failed: %s\n", strerror(errno));
+                return;
+            }            
+            strcat( strcpy( subpath, pathname ), "/" );      // concat base path
+            strcat( subpath, direntp->d_name );            // add subpath's name           
+            struct stat buff;                            // for lstat on subpath
+            if ( lstat( subpath, &buff ) == -1 )       // if can't lstat subpath
+                return;                                             
+            fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod             
+            fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size); // file size                                   
+            
+            fflush(fp);                                   // send data to client
+            free(subpath);
         } 
     }
-
-    if ( closedir(*dir_ptr) == -1 )
-    {
-        fprintf(stderr, "wsng: can't close '%s': %s\n"
-                , pathname, strerror(errno));
-    }
+    fprintf(fp, "</table>\r\n");        
 }
 
 /* ------------------------------------------------------ *
