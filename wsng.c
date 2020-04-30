@@ -293,7 +293,7 @@ void process_config_file(char *conf_file, int *portnump)
 }
 
 /* *
- * TODO: figure out where/when to free the linked list
+ * TODO
  */
 static int add_to_table( char* extension, char* content )
 {
@@ -546,7 +546,7 @@ do_ls(char *dir, FILE *fp)
 }
 
 /* *
- * TODO: need to fix header showing up
+ * 
  * purpose: acts on directory based on priority. 'index.html' files get first
  * priority, then 'index.cgi'; listing directory contents is the base case
  */
