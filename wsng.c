@@ -539,7 +539,7 @@ do_ls(char *dir, FILE *fp)
         return;
     }
     else                       
-        do_get_rules( dir, dir_ptr, fp );              // traverse and print dir  
+        do_get_rules( dir, dir_ptr, fp );               
     
     if ( closedir(dir_ptr) == -1 )
         fprintf(stderr, "wsng: can't close '%s': %s\n", dir, strerror(errno));
