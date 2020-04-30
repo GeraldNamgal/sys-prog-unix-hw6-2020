@@ -56,8 +56,10 @@
 char	myhost[MAXHOSTNAMELEN];
 int	    myport;
 char	*full_hostname();
-int     add_to_table( char*, char* );
-void    traverseDir( char *pathname, DIR *, FILE* );
+static int add_to_table( char*, char* );
+static void traverseDir( char *, DIR *, FILE* );
+static void do_get_rules( char*, DIR *, FILE* );
+static char* concat_paths( char*, char* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
 
@@ -293,7 +295,7 @@ void process_config_file(char *conf_file, int *portnump)
 /* *
  * TODO: figure out where/when to free the linked list
  */
-int add_to_table( char* extension, char* content )
+static int add_to_table( char* extension, char* content )
 {
     file_info* new_entry = (file_info*) malloc(sizeof(file_info));
     if (new_entry == NULL) {
@@ -500,7 +502,12 @@ int
 isadir(char *f)
 {
 	struct stat info;
-	return ( stat(f, &info) != -1 && S_ISDIR(info.st_mode) );
+    int rv = -1;                                               // assume failure
+
+    if ( ( rv = stat(f, &info) ) == -1 )                         // cannot stat?	 
+		fprintf(stderr, "wsng: cannot access '%s': %s\n", f, strerror(errno));
+
+	return ( rv != -1 && S_ISDIR(info.st_mode) );
 }
 
 int
@@ -518,7 +525,7 @@ not_exist(char *f)
 void
 do_ls(char *dir, FILE *fp)
 {
-	int	fd;	/* file descriptor of stream */
+	int	fd;                                    	/* file descriptor of stream */
 
 	header(fp, 200, "OK", "text/html");
 	fprintf(fp,"\r\n");
@@ -528,56 +535,98 @@ do_ls(char *dir, FILE *fp)
 	dup2(fd,1);
 	dup2(fd,2);
 
-    struct stat info;
     DIR	*dir_ptr;
 
-    if ( lstat( dir, &info) == -1 ) {	                         // cannot lstat	 
-		fprintf(stderr, "wsng: cannot access '%s': %s\n"            
+    if ( ( dir_ptr = opendir( dir ) ) == NULL ) {              // cannot opendir
+        fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
                 , dir, strerror(errno));                              // say why
         return;
     }
-    if ( S_ISDIR( info.st_mode ) ) {                             // if directory   
-        if ( ( dir_ptr = opendir( dir ) ) == NULL ) {          // cannot opendir
-            fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
-                    , dir, strerror(errno));                          // say why
-            return;
-        }
-        else                       
-            traverseDir( dir, dir_ptr, fp );               
-    }
+    else                       
+        do_get_rules( dir, dir_ptr, fp );               // traverse and print dir  
+    
     if ( closedir(dir_ptr) == -1 )
         fprintf(stderr, "wsng: can't close '%s': %s\n", dir, strerror(errno));
 }
 
-void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
+/* *
+ * TODO
+ * purpose: acts on directory based on priority. 'index.html' files get first
+ * priority, then 'index.cgi'; listing directory contents is the base case
+ */
+static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp )
+{    
+    int found_index_html = 0;
+    int found_index_cgi = 0;
+    char* new_path = NULL;    
+    struct dirent *direntp;		                                   // each entry
+    while ( ( direntp = readdir( dir_ptr ) ) != NULL )    // search 'index.html'
+        if ( strcmp( "index.html", direntp->d_name ) == 0 ) {
+            found_index_html = 1;
+            if ((new_path = concat_paths(pathname, direntp->d_name)) != NULL) {
+                do_cat( new_path, fp );
+                free(new_path);
+            }
+            break;
+        }
+    if ( !found_index_html ) {                               // no 'index.html'?
+        rewinddir( dir_ptr );
+        while ( ( direntp = readdir( dir_ptr ) ) != NULL ) // search 'index.cgi' 
+            if ( strcmp( "index.cgi", direntp->d_name ) == 0 ) {
+                found_index_cgi = 1;
+                if ( (new_path = concat_paths( pathname, direntp->d_name ))
+                      != NULL ) {
+                        do_exec( new_path, fp );
+                        free(new_path);
+                }
+                break;
+            }
+    }
+    if ( !( found_index_html || found_index_cgi ) ) {   // no index files found?
+        rewinddir( dir_ptr );
+        traverseDir( pathname, dir_ptr, fp );          // traverse and print dir
+    }
+}
+
+static char* concat_paths( char* path1, char* path2 )
+{
+    char* new_path = malloc( strlen(path1) + strlen(path2) + 2 );  
+    if( new_path == NULL ) {                                 // if malloc failed
+        fprintf(stderr, "wsng: malloc failed: %s\n", strerror(errno));
+        return new_path;
+    }            
+    strcat( strcpy( new_path, path1 ), "/" );                // concat base path
+    strcat( new_path, path2 );                             // add subpath's name  
+
+    return new_path;
+}
+
+static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
 {  
-    char pad[] = "style=\"padding:0 5px 0 5px;\"";
-    fprintf(fp, "<table style=\"padding:5px 0 0 0;\">");
+    char pad[] = "style=\"padding:0 2.5px 0 2.5px;\"";    
+    fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
     fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);
 
     struct dirent *direntp;		                                   // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
-        if ( strcmp( direntp->d_name, "." ) != 0
-              && strcmp( direntp->d_name, ".." ) != 0 )     // skip "." and ".."                                                                  
-        {            
+        if (strcmp( direntp->d_name, "." ) != 0
+           && strcmp( direntp->d_name, ".." ) != 0) {       // skip "." and ".."                                                                  
+            char *subpath;            
+            if( ( subpath = concat_paths(pathname, direntp->d_name) ) == NULL )
+                continue;
             fprintf(fp, "<tr><td %s><a href=\"http://localhost:%d/%s\">", pad
-                    ,myport, direntp->d_name);                                  
-            fprintf(fp, "%s</a></td>", direntp->d_name);                 // name
-            char *subpath;                           // get subpath for lstat... 
-            subpath = malloc( strlen(pathname) + strlen(direntp->d_name) + 2 );  
-            if( subpath == NULL ) {                          // if malloc failed
-                fprintf(stderr, "wsng: malloc failed: %s\n", strerror(errno));
-                return;
-            }            
-            strcat( strcpy( subpath, pathname ), "/" );      // concat base path
-            strcat( subpath, direntp->d_name );            // add subpath's name           
-            struct stat buff;                            // for lstat on subpath
-            if ( lstat( subpath, &buff ) == -1 )       // if can't lstat subpath
+                    ,myport, subpath);                                  
+            fprintf(fp, "%s</a></td>", direntp->d_name);                 // name                      
+            struct stat buff;                                    // stat subpath
+            if ( stat( subpath, &buff ) == -1 ) {                 // can't stat?
+                fprintf(stderr, "wsng: cannot access '%s': %s\n", subpath
+                        , strerror(errno));
+                free(subpath);
                 return;                                             
-            fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod             
-            fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size); // file size                                   
-            
+            }
+            fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod        
+            fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size); // file size  
             fflush(fp);                                   // send data to client
             free(subpath);
         } 
