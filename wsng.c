@@ -527,10 +527,6 @@ do_ls(char *dir, FILE *fp)
 {
 	int	fd;                                    	/* file descriptor of stream */
 
-	header(fp, 200, "OK", "text/html");
-	fprintf(fp,"\r\n");
-	fflush(fp);
-
 	fd = fileno(fp);
 	dup2(fd,1);
 	dup2(fd,2);
@@ -543,19 +539,18 @@ do_ls(char *dir, FILE *fp)
         return;
     }
     else                       
-        do_get_rules( dir, dir_ptr, fp );               // traverse and print dir  
+        do_get_rules( dir, dir_ptr, fp );              // traverse and print dir  
     
     if ( closedir(dir_ptr) == -1 )
         fprintf(stderr, "wsng: can't close '%s': %s\n", dir, strerror(errno));
 }
 
 /* *
- * TODO
+ * TODO: need to fix header showing up
  * purpose: acts on directory based on priority. 'index.html' files get first
  * priority, then 'index.cgi'; listing directory contents is the base case
  */
-static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp )
-{    
+static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {    
     int found_index_html = 0;
     int found_index_cgi = 0;
     char* new_path = NULL;    
@@ -574,8 +569,7 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp )
         while ( ( direntp = readdir( dir_ptr ) ) != NULL ) // search 'index.cgi' 
             if ( strcmp( "index.cgi", direntp->d_name ) == 0 ) {
                 found_index_cgi = 1;
-                if ( (new_path = concat_paths( pathname, direntp->d_name ))
-                      != NULL ) {
+                if ((new_path = concat_paths(pathname, direntp->d_name))!=NULL){
                         do_exec( new_path, fp );
                         free(new_path);
                 }
@@ -584,6 +578,9 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp )
     }
     if ( !( found_index_html || found_index_cgi ) ) {   // no index files found?
         rewinddir( dir_ptr );
+        header(fp, 200, "OK", "text/html");
+	    fprintf(fp,"\r\n");
+	    fflush(fp);
         traverseDir( pathname, dir_ptr, fp );          // traverse and print dir
     }
 }
@@ -692,7 +689,7 @@ do_cat(char *f, FILE *fpsock)
     tmp_ptr = content_types;
     while ( tmp_ptr != NULL ) {                       // is extension in config?
         if ( strcmp( extension, tmp_ptr->extension ) == 0 ) {
-            content = tmp_ptr->content;             // then change content
+            content = tmp_ptr->content;                   // then change content
             break;
         }
         tmp_ptr = tmp_ptr->next;
