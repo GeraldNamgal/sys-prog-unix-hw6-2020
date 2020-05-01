@@ -56,10 +56,6 @@
 char	myhost[MAXHOSTNAMELEN];
 int	    myport;
 char	*full_hostname();
-static void add_to_table( char*, char* );
-static void traverseDir( char *, DIR *, FILE* );
-static void do_get_rules( char*, DIR *, FILE* );
-static char* concat_paths( char*, char* );
 
 #define	oops(m,x)	{ perror(m); exit(x); }
 
@@ -84,16 +80,21 @@ void	do_404(char *item, FILE *fp);
 void	do_cat(char *f, FILE *fpsock);
 void	do_exec( char *prog, FILE *fp);
 void	do_ls(char *dir, FILE *fp);
-int	ends_in_cgi(char *f);
+int	    ends_in_cgi(char *f);
 char 	*file_type(char *f);
 void	header( FILE *fp, int code, char *msg, char *content_type );
-int	isadir(char *f);
+int	    isadir(char *f);
 char	*modify_argument(char *arg, int len);
-int	not_exist(char *f);
+int	    not_exist(char *f);
 void	fatal(char *, char *);
 void	handle_call(int);
-int	read_request(FILE *, char *, int);
+int	    read_request(FILE *, char *, int);
 char	*readline(char *, int, FILE *);
+static void add_to_table( char*, char* );
+static void traverseDir( char *, DIR *, FILE* );
+static void do_get_rules( char*, DIR *, FILE* );
+static char* concat_paths( char*, char* );
+void do_500(char*, FILE *);
 
 int	mysocket = -1;		/* for SIGINT handler */
 
@@ -293,7 +294,7 @@ void process_config_file(char *conf_file, int *portnump)
 }
 
 /* *
- * TODO
+ * 
  */
 static void add_to_table( char* extension, char* content )
 {
@@ -490,6 +491,15 @@ do_404(char *item, FILE *fp)
 			item);
 }
 
+void
+do_500(char *msg, FILE *fp)
+{
+    header(fp, 500, "Internal Server Error", "text/plain");
+	fprintf(fp, "\r\n");
+
+    fprintf(fp, "%s\r\n", msg);
+}
+
 /* ------------------------------------------------------ *
    the directory listing section
    isadir() uses stat, not_exist() uses stat
@@ -528,9 +538,9 @@ do_ls(char *dir, FILE *fp)
     DIR	*dir_ptr;
 
     if ( ( dir_ptr = opendir( dir ) ) == NULL ) {              // cannot opendir
-        fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
-                , dir, strerror(errno));                              // say why
-        // TODO: 500 error
+        char str[MAX_RQ_LEN];
+        sprintf(str, "Cannot read directory '%s': %s\n", dir, strerror(errno));
+        do_500( str, fp );
         return;
     }
     else                       
@@ -557,6 +567,8 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
                 do_cat( new_path, fp );
                 free(new_path);
             }
+            else
+                do_500( "Memory error", fp );
             break;
         }
     if ( !found_index_html ) {                               // no 'index.html'?
@@ -568,13 +580,13 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
                         do_exec( new_path, fp );
                         free(new_path);
                 }
+                else
+                    do_500( "Memory error", fp );
                 break;
             }
     }
     if ( !( found_index_html || found_index_cgi ) ) {   // no index files found?
         rewinddir( dir_ptr );
-        header(fp, 200, "OK", "text/html");
-	    fprintf(fp,"\r\n");
         traverseDir( pathname, dir_ptr, fp );          // traverse and print dir
     }
 }
@@ -584,7 +596,6 @@ static char* concat_paths( char* path1, char* path2 )
     char* new_path = malloc( strlen(path1) + strlen(path2) + 2 );  
     if( new_path == NULL ) {                                 // if malloc failed
         fprintf(stderr, "wsng: malloc failed: %s\n", strerror(errno));
-        // TODO: 500 error
         return new_path;
     }            
     strcat( strcpy( new_path, path1 ), "/" );                // concat base path
@@ -595,11 +606,13 @@ static char* concat_paths( char* path1, char* path2 )
 
 static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
 {  
+    header(fp, 200, "OK", "text/html");
+	fprintf(fp,"\r\n");
+
     char pad[] = "style=\"padding:0 2.5px 0 2.5px;\"";    
     fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
     fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);
-
     struct dirent *direntp;		                                   // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
         if (strcmp( direntp->d_name, "." ) != 0
@@ -612,7 +625,6 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
                 fprintf(stderr, "wsng: cannot access '%s': %s\n", subpath 
                         , strerror(errno));
                 free(subpath);
-                // TODO: 500 error
                 return;                                             
             }
             if (S_ISDIR(buff.st_mode))               // add forward slash if dir
@@ -700,7 +712,8 @@ do_cat(char *f, FILE *fpsock)
 			putc(c, fpsock);
 		fclose(fpfile);
 	}
-    // TODO: 500 error
+    else
+        do_500( "File error", fpsock );
 }
 
 char *
