@@ -575,7 +575,6 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
         rewinddir( dir_ptr );
         header(fp, 200, "OK", "text/html");
 	    fprintf(fp,"\r\n");
-	    fflush(fp);
         traverseDir( pathname, dir_ptr, fp );          // traverse and print dir
     }
 }
