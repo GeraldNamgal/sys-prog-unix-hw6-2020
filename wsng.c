@@ -56,7 +56,7 @@
 char	myhost[MAXHOSTNAMELEN];
 int	    myport;
 char	*full_hostname();
-static int add_to_table( char*, char* );
+static void add_to_table( char*, char* );
 static void traverseDir( char *, DIR *, FILE* );
 static void do_get_rules( char*, DIR *, FILE* );
 static char* concat_paths( char*, char* );
@@ -295,12 +295,11 @@ void process_config_file(char *conf_file, int *portnump)
 /* *
  * TODO
  */
-static int add_to_table( char* extension, char* content )
+static void add_to_table( char* extension, char* content )
 {
     file_info* new_entry = (file_info*) malloc(sizeof(file_info));
     if (new_entry == NULL) {
-        fprintf(stderr, "wsng: malloc failed\n");
-        return 0;                                              // return failure
+        fatal("wsng: malloc failed for saving config info", NULL);                                         
     }
     new_entry->next = NULL;
     for (int i = 0; i < strlen(extension) + 1; i++)
@@ -322,7 +321,6 @@ static int add_to_table( char* extension, char* content )
             tmp_ptr = tmp_ptr->next;
         }
     }
-    return 1;                                                  // return success
 }
 
 /*
@@ -532,6 +530,7 @@ do_ls(char *dir, FILE *fp)
     if ( ( dir_ptr = opendir( dir ) ) == NULL ) {              // cannot opendir
         fprintf(stderr, "wsng: cannot read directory '%s': %s\n"        
                 , dir, strerror(errno));                              // say why
+        // TODO: 500 error
         return;
     }
     else                       
@@ -586,6 +585,7 @@ static char* concat_paths( char* path1, char* path2 )
     char* new_path = malloc( strlen(path1) + strlen(path2) + 2 );  
     if( new_path == NULL ) {                                 // if malloc failed
         fprintf(stderr, "wsng: malloc failed: %s\n", strerror(errno));
+        // TODO: 500 error
         return new_path;
     }            
     strcat( strcpy( new_path, path1 ), "/" );                // concat base path
@@ -613,6 +613,7 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
                 fprintf(stderr, "wsng: cannot access '%s': %s\n", subpath 
                         , strerror(errno));
                 free(subpath);
+                // TODO: 500 error
                 return;                                             
             }
             if (S_ISDIR(buff.st_mode))               // add forward slash if dir
@@ -700,6 +701,7 @@ do_cat(char *f, FILE *fpsock)
 			putc(c, fpsock);
 		fclose(fpfile);
 	}
+    // TODO: 500 error
 }
 
 char *
