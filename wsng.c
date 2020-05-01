@@ -608,8 +608,6 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
             char *subpath;            
             if( ( subpath = concat_paths(pathname, direntp->d_name) ) == NULL )
                 continue;
-            fprintf(fp, "<tr><td %s><a href=\"%s/\">", pad, direntp->d_name);                                  
-            fprintf(fp, "%s</a></td>", direntp->d_name);                 // name                      
             struct stat buff;                                    // stat subpath
             if ( stat( subpath, &buff ) == -1 ) {                 // can't stat?
                 fprintf(stderr, "wsng: cannot access '%s': %s\n", subpath 
@@ -617,6 +615,11 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
                 free(subpath);
                 return;                                             
             }
+            if (S_ISDIR(buff.st_mode))               // add forward slash if dir
+                fprintf(fp,"<tr><td %s><a href=\"%s/\">", pad, direntp->d_name);
+            else                                // no forward slash for non-dirs
+                fprintf(fp, "<tr><td %s><a href=\"%s\">", pad, direntp->d_name);
+            fprintf(fp, "%s</a></td>", direntp->d_name);                 // name 
             fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod        
             fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size); // file size  
             fflush(fp);                                   // send data to client
