@@ -6,7 +6,8 @@
 /* *
  * wsng
  * 
- * note: builds on 'ws.c' starter code given in assignment instructions
+ * note: builds on 'ws.c' starter code given in assignment instructions; also
+ * references timeserv_fork.c from lecture 13 
  */
 
 #include	<stdio.h>
@@ -23,6 +24,7 @@
 #include	"socklib.h"
 #include    <time.h>
 #include	<dirent.h>
+#include    <sys/wait.h>
 
 /*
  * ws.c - a web server
@@ -47,11 +49,12 @@
 #define	CONFIG_FILE	"wsng.conf"
 #define	VERSION		"1"
 
-#define	MAX_RQ_LEN	4096
-#define	LINELEN		1024
-#define	PARAM_LEN	128
-#define	VALUE_LEN	512
-#define MAX_ARGS    2
+#define	MAX_RQ_LEN	    4096
+#define	LINELEN		    1024
+#define	PARAM_LEN	    128
+#define	VALUE_LEN	    512
+#define MAX_ARGS        2
+#define ZOMBIE_LIMIT    10
 
 char	myhost[MAXHOSTNAMELEN];
 int	    myport;
@@ -95,8 +98,14 @@ static void traverseDir( char *, DIR *, FILE* );
 static void do_get_rules( char*, DIR *, FILE* );
 static char* concat_paths( char*, char* );
 void do_500(char*, FILE *);
+void do_507(char*, FILE *);
+void cleanup_children();
+int has_cgi_questmark(char *f);
+void do_cgi_questmark(char *f, FILE *);
+void print_parent_dir(char[], FILE *);
 
-int	mysocket = -1;		/* for SIGINT handler */
+int	mysocket = -1;		                                /* for SIGINT handler */
+static int active_children = 0;                        // active child processes
 
 int
 main(int ac, char *av[])
@@ -118,10 +127,16 @@ main(int ac, char *av[])
 			perror("accept");
 		else
 			handle_call(fd);		/* handle call	*/
+
+        if (active_children > ZOMBIE_LIMIT)
+            cleanup_children();
 	}
 	return 0;
 	/* never end */
 }
+
+// TODO: Use strtok_r(), not strtok() to split strings
+// reference: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
 
 /*
  * handle_call(fd) - serve the request arriving on fd
@@ -157,8 +172,20 @@ void handle_call(int fd)
 		exit(0);		/* child is done	*/
 					/* exit closes files	*/
 	}
-	/* parent: close fd and return to take next call	*/
-	close(fd);
+	else {
+        /* parent: close fd and return to take next call	*/
+        close(fd);
+        active_children++;
+    }
+}
+
+void cleanup_children()
+{
+    int pid, status;
+
+    while (active_children && (pid = waitpid (-1, &status, WNOHANG))) {
+        active_children--;
+    }
 }
 
 /*
@@ -376,12 +403,14 @@ void process_rq(char *rq, FILE *fp)
 	item = modify_argument(arg, MAX_RQ_LEN);
 	if ( strcmp(cmd,"GET") != 0 )
 		cannot_do(fp);
+    else if ( has_cgi_questmark( item ) )
+        do_cgi_questmark( item, fp );
 	else if ( not_exist( item ) )
 		do_404(item, fp );
 	else if ( isadir( item ) )
 		do_ls( item, fp );
 	else if ( ends_in_cgi( item ) )
-		do_exec( item, fp );
+		do_exec( item, fp );    
 	else
 		do_cat( item, fp );
 }
@@ -500,6 +529,15 @@ do_500(char *msg, FILE *fp)
     fprintf(fp, "%s\r\n", msg);
 }
 
+void
+do_507(char *msg, FILE *fp)
+{
+    header(fp, 507, "Insufficient Storage", "text/plain");
+	fprintf(fp, "\r\n");
+
+    fprintf(fp, "%s\r\n", msg);
+}
+
 /* ------------------------------------------------------ *
    the directory listing section
    isadir() uses stat, not_exist() uses stat
@@ -568,7 +606,7 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
                 free(new_path);
             }
             else
-                do_500( "Memory error", fp );
+                do_507( "Malloc failed", fp ); 
             break;
         }
     if ( !found_index_html ) {                               // no 'index.html'?
@@ -581,7 +619,7 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
                         free(new_path);
                 }
                 else
-                    do_500( "Memory error", fp );
+                    do_507( "Malloc failed", fp );
                 break;
             }
     }
@@ -604,15 +642,17 @@ static char* concat_paths( char* path1, char* path2 )
     return new_path;
 }
 
-static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
-{  
+static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {  
     header(fp, 200, "OK", "text/html");
 	fprintf(fp,"\r\n");
-
     char pad[] = "style=\"padding:0 2.5px 0 2.5px;\"";    
     fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
     fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);
+    printf("here pathname is %s\n", pathname);
+    
+    if ( strcmp("/", pathname) == 0 )
+        print_parent_dir(pad, fp);
     struct dirent *direntp;		                                   // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
         if (strcmp( direntp->d_name, "." ) != 0
@@ -641,6 +681,14 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
     fprintf(fp, "</table>\r\n");        
 }
 
+void print_parent_dir(char pad[], FILE* fp)
+{
+    fprintf(fp,"<tr><td %s><a href=\"/~garocena/\">", pad);
+    fprintf(fp, "Parent Directory</a></td>");                            
+    fprintf(fp, "<td %s></td>", pad);               
+    fprintf(fp, "<td %s></td></tr>", pad);          
+}
+
 /* ------------------------------------------------------ *
    the cgi stuff.  function to check extension and
    one to run the program.
@@ -660,6 +708,56 @@ int
 ends_in_cgi(char *f)
 {
 	return ( strcmp( file_type(f), "cgi" ) == 0 );
+}
+
+int has_cgi_questmark(char *f)
+{
+    char suffix[] = "cgi?";
+    char* str = file_type(f);
+
+    int i = 0;
+    while ( suffix[i] != '\0' )
+    {
+        if ( suffix[i] != str[i] )
+            return 0;
+        i++;
+    }
+
+    return 1;
+}
+/* *
+ *
+ * note: referenced
+ * https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
+ */
+void do_cgi_questmark(char* arg, FILE *fp)
+{    
+    char str[ strlen(arg) + 1 ];                                     // copy arg
+    for (int i = 0; i < strlen(arg) + 1; i++)
+    {
+        str[i] = arg[i];
+    }
+    
+    char* token;                                             // get reg argument
+    char* rest = str;
+    token = strtok_r(rest, "?", &rest);
+    char reg_arg[ strlen(token) + 1 ];
+    for (int i = 0; i < strlen(token) + 1; i++)
+    {
+        reg_arg[i] = token[i];
+    }
+    
+    token = strtok_r(rest, " ", &rest);                      // get query string
+    char query_string[ strlen(token) + 1 ];
+    for (int i = 0; i < strlen(token) + 1; i++)
+    {
+        query_string[i] = token[i];
+    }
+
+    setenv("QUERY_STRING", query_string, 1);            // set the env variables
+    setenv("REQUEST_METHOD", "GET", 1);
+
+    do_exec(reg_arg, fp);                            // call exec on the reg arg
 }
 
 void
@@ -713,7 +811,7 @@ do_cat(char *f, FILE *fpsock)
 		fclose(fpfile);
 	}
     else
-        do_500( "File error", fpsock );
+        do_500( "Open file error", fpsock );
 }
 
 char *
