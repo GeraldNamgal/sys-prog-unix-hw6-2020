@@ -134,9 +134,6 @@ main(int ac, char *av[])
 	/* never end */
 }
 
-// TODO: Use strtok_r(), not strtok() to split strings
-// reference: https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
-
 /*
  * handle_call(fd) - serve the request arriving on fd
  * summary: fork, then get request, then process request
@@ -712,6 +709,7 @@ int has_cgi_questmark(char *f)
 
     return 1;
 }
+
 /* *
  *
  * note: referenced
