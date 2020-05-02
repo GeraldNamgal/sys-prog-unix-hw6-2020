@@ -648,10 +648,8 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {
     char pad[] = "style=\"padding:0 2.5px 0 2.5px;\"";    
     fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
-    fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);
-    printf("here pathname is %s\n", pathname);
-    
-    if ( strcmp("/", pathname) == 0 )
+    fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);    
+    if ( strcmp(".", pathname) == 0 )
         print_parent_dir(pad, fp);
     struct dirent *direntp;		                                   // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
