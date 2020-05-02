@@ -26,7 +26,7 @@
 #include	<dirent.h>
 #include    <sys/wait.h>
 
-/*
+/* *
  * ws.c - a web server
  *
  *    usage: ws [ -c configfilenmame ]
@@ -62,18 +62,17 @@ char	*full_hostname();
 
 #define	oops(m,x)	{ perror(m); exit(x); }
 
-typedef struct file_info {
-    char extension[VALUE_LEN];
-    char content[VALUE_LEN];
-    struct file_info* next;
+typedef struct file_info {            // holds file info/ext.'s from config file
+    char extension[VALUE_LEN];                               // a file extension
+    char content[VALUE_LEN];               // the extension's associated content
+    struct file_info* next;                                   // for linked list
 } file_info;
 
 file_info* content_types = NULL;                          // head of linked list
 
-/*
+/* *
  * prototypes
  */
-
 int	startup(int, char *a[], char [], int *);
 void	read_til_crnl(FILE *);
 void	process_rq( char *, FILE *);
@@ -102,10 +101,15 @@ void do_507(char*, FILE *);
 void cleanup_children();
 int has_cgi_questmark(char *f);
 void do_cgi_questmark(char *f, FILE *);
+int countDigit(long long n);
 
 int	mysocket = -1;		                                /* for SIGINT handler */
 static int active_children = 0;                        // active child processes
 
+/* *
+ * main(int ac, char *av[])
+ *
+ */
 int
 main(int ac, char *av[])
 {
@@ -114,6 +118,10 @@ main(int ac, char *av[])
 	/* set up */
 	sock = startup(ac, av, myhost, &myport);
 	mysocket = sock;
+    
+    char port[ countDigit((long) myport ) + 1 ];  
+    sprintf(port, "%d", myport);                        // convert int to string
+    setenv("SERVER_PORT", port, 1);            // set a CGI environment variable
 
 	/* sign on */
 	printf("wsng%s started.  host=%s port=%d\n", VERSION, myhost, myport);
@@ -134,7 +142,7 @@ main(int ac, char *av[])
 	/* never end */
 }
 
-/*
+/* *
  * handle_call(fd) - serve the request arriving on fd
  * summary: fork, then get request, then process request
  *    rets: child exits with 1 for error, 0 for ok
@@ -175,6 +183,9 @@ void handle_call(int fd)
     }
 }
 
+/* *
+ *
+ */ 
 void cleanup_children()
 {
     int pid, status;
@@ -184,7 +195,7 @@ void cleanup_children()
     }
 }
 
-/*
+/* *
  * read the http request into rq not to exceed rqlen
  * return -1 for error, 0 for success
  */
@@ -205,7 +216,7 @@ void read_til_crnl(FILE *fp)
                 ;
 }
 
-/*
+/* *
  * readline -- read in a line from fp, stop at \n 
  *    args: buf - place to store line
  *          len - size of buffer
@@ -230,7 +241,8 @@ char *readline(char *buf, int len, FILE *fp)
         *cp = '\0';
         return ( c == EOF && cp == buf ? NULL : buf );
 }
-/*
+
+/* *
  * initialization function
  * 	1. process command line args
  *		handles -c configfile
@@ -276,7 +288,7 @@ int startup(int ac, char *av[], char host[], int *portnump)
 }
 
 
-/*
+/* *
  * opens file or dies
  * reads file for lines with the format
  *   port ###
@@ -347,7 +359,7 @@ static void add_to_table( char* extension, char* content )
     }
 }
 
-/*
+/* *
  * read_param:
  *   purpose -- read next parameter setting line from fp
  *   details -- a param-setting line looks like  name value
@@ -377,15 +389,12 @@ int read_param(FILE *fp, char *name, int nlen, char value[MAX_ARGS][VALUE_LEN]
 	}
 	return EOF;
 }
-	
-
 
 /* ------------------------------------------------------ *
    process_rq( char *rq, FILE *fpout)
    do what the request asks for and write reply to fp
    rq is HTTP command:  GET /foo/bar.html HTTP/1.0
    ------------------------------------------------------ */
-
 void process_rq(char *rq, FILE *fp)
 {
 	char	cmd[MAX_RQ_LEN], arg[MAX_RQ_LEN];
@@ -411,7 +420,7 @@ void process_rq(char *rq, FILE *fp)
 		do_cat( item, fp );
 }
 
-/*
+/* *
  * modify_argument
  *  purpose: many roles
  *		security - remove all ".." components in paths
@@ -419,7 +428,6 @@ void process_rq(char *rq, FILE *fp)
  *  returns: pointer to modified string
  *     args: array containing arg and length of that array
  */
-
 char *
 modify_argument(char *arg, int len)
 {
@@ -456,11 +464,11 @@ modify_argument(char *arg, int len)
 		strcpy(arg, ".");
 	return arg;
 }
+
 /* ------------------------------------------------------ *
    the reply header thing: all functions need one
    if content_type is NULL then don't send content type
    ------------------------------------------------------ */
-
 void
 header( FILE *fp, int code, char *msg, char *content_type )
 {
@@ -489,7 +497,6 @@ header( FILE *fp, int code, char *msg, char *content_type )
         cannot_do(fp)       unimplemented HTTP command
     and do_404(item,fp)     no such object
    ------------------------------------------------------ */
-
 void
 bad_request(FILE *fp)
 {
@@ -516,6 +523,9 @@ do_404(char *item, FILE *fp)
 			item);
 }
 
+/* *
+ *
+ */
 void
 do_500(char *msg, FILE *fp)
 {
@@ -525,6 +535,9 @@ do_500(char *msg, FILE *fp)
     fprintf(fp, "%s\r\n", msg);
 }
 
+/* *
+ *
+ */
 void
 do_507(char *msg, FILE *fp)
 {
@@ -537,7 +550,7 @@ do_507(char *msg, FILE *fp)
 /* ------------------------------------------------------ *
    the directory listing section
    isadir() uses stat, not_exist() uses stat
-   do_ls runs ls. It should not
+   do_ls does not actually do the ls command
    ------------------------------------------------------ */
 
 int
@@ -556,7 +569,7 @@ not_exist(char *f)
 	return( stat(f,&info) == -1 && errno == ENOENT );
 }
 
-/*
+/* *
  * lists the directory named by 'dir' 
  * sends the listing to the stream at fp
  */
@@ -585,7 +598,7 @@ do_ls(char *dir, FILE *fp)
 }
 
 /* *
- * 
+ * do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp )
  * purpose: acts on directory based on priority. 'index.html' files get first
  * priority, then 'index.cgi'; listing directory contents is the base case
  */
@@ -625,6 +638,9 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
     }
 }
 
+/* *
+ * concat_paths( char* path1, char* path2 )
+ */
 static char* concat_paths( char* path1, char* path2 )
 {
     char* new_path = malloc( strlen(path1) + strlen(path2) + 2 );  
@@ -638,6 +654,9 @@ static char* concat_paths( char* path1, char* path2 )
     return new_path;
 }
 
+/* *
+ * traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
+ */
 static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {  
     header(fp, 200, "OK", "text/html");
 	fprintf(fp,"\r\n");
@@ -694,6 +713,9 @@ ends_in_cgi(char *f)
 	return ( strcmp( file_type(f), "cgi" ) == 0 );
 }
 
+/* *
+ * has_cgi_questmark(char *f)
+ */
 int has_cgi_questmark(char *f)
 {
     char suffix[] = "cgi?";
@@ -711,7 +733,7 @@ int has_cgi_questmark(char *f)
 }
 
 /* *
- *
+ * do_cgi_questmark(char* arg, FILE *fp)
  * note: referenced
  * https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
  */
@@ -758,11 +780,11 @@ do_exec( char *prog, FILE *fp)
 	execl(prog,prog,NULL);
 	perror(prog);
 }
+
 /* ------------------------------------------------------ *
    do_cat(filename,fp)
    sends back contents after a header
    ------------------------------------------------------ */
-
 void
 do_cat(char *f, FILE *fpsock)
 {
@@ -799,13 +821,13 @@ do_cat(char *f, FILE *fpsock)
         do_500( "Open file error", fpsock );
 }
 
-char *
-full_hostname()
-/*
+/* *
  * returns full `official' hostname for current machine
  * NOTE: this returns a ptr to a static buffer that is
  *       overwritten with each call. ( you know what to do.)
  */
+char *
+full_hostname()
 {
 	struct	hostent		*hp;
 	char	hname[MAXHOSTNAMELEN];
@@ -823,7 +845,6 @@ full_hostname()
 	return fullname;			/* and return it	*/
 }
 
-
 void fatal(char *fmt, char *str)
 {
 	fprintf(stderr, fmt, str);
@@ -838,3 +859,18 @@ void done(int n)
 	}
 	exit(0);
 }
+
+/* *
+ * note: referenced
+ * https://www.geeksforgeeks.org/program-count-digits-integer-3-different-
+ * methods/
+ */
+int countDigit(long long n) 
+{ 
+    int count = 0; 
+    while (n != 0) { 
+        n = n / 10; 
+        ++count; 
+    } 
+    return count; 
+} 
