@@ -102,7 +102,6 @@ void do_507(char*, FILE *);
 void cleanup_children();
 int has_cgi_questmark(char *f);
 void do_cgi_questmark(char *f, FILE *);
-void print_parent_dir(char[], FILE *);
 
 int	mysocket = -1;		                                /* for SIGINT handler */
 static int active_children = 0;                        // active child processes
@@ -649,8 +648,6 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {
     fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
     fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);    
-    if ( strcmp(".", pathname) == 0 )
-        print_parent_dir(pad, fp);
     struct dirent *direntp;		                                   // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
         if (strcmp( direntp->d_name, "." ) != 0
@@ -677,14 +674,6 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {
         } 
     }
     fprintf(fp, "</table>\r\n");        
-}
-
-void print_parent_dir(char pad[], FILE* fp)
-{
-    fprintf(fp,"<tr><td %s><a href=\"/~garocena/\">", pad);
-    fprintf(fp, "Parent Directory</a></td>");                            
-    fprintf(fp, "<td %s></td>", pad);               
-    fprintf(fp, "<td %s></td></tr>", pad);          
 }
 
 /* ------------------------------------------------------ *
