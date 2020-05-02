@@ -119,9 +119,9 @@ main(int ac, char *av[])
 	sock = startup(ac, av, myhost, &myport);
 	mysocket = sock;
     
-    char port[ countDigit((long) myport ) + 1 ];  
-    sprintf(port, "%d", myport);                        // convert int to string
-    setenv("SERVER_PORT", port, 1);            // set a CGI environment variable
+    char port_buff[ countDigit((long) myport ) + 1 ];  
+    sprintf(port_buff, "%d", myport);                   // convert int to string
+    setenv("SERVER_PORT", port_buff, 1);       // set a CGI environment variable
 
 	/* sign on */
 	printf("wsng%s started.  host=%s port=%d\n", VERSION, myhost, myport);
@@ -683,8 +683,11 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {
             else                                // no forward slash for non-dirs
                 fprintf(fp, "<tr><td %s><a href=\"%s\">", pad, direntp->d_name);
             fprintf(fp, "%s</a></td>", direntp->d_name);                 // name 
-            fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod        
-            fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size); // file size  
+            fprintf(fp, "<td %s>%s</td>", pad, ctime( &buff.st_atime ) ); // mod
+            if (!S_ISDIR(buff.st_mode))
+                fprintf(fp, "<td %s>%ld</td></tr>", pad, buff.st_size);  // size
+            else
+                fprintf(fp, "<td %s>-</td></tr>", pad);
             fflush(fp);                                   // send data to client
             free(subpath);
         } 
