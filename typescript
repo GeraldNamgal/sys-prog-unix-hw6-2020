@@ -1,0 +1,85 @@
+Script started on 2020-05-03 03:36:54+0000
+]0;garocena@cscie28:~/ws[?1034h[garocena@cscie28 ws]$ make clean
+rm -f wsng.o socklib.o core wsng
+]0;garocena@cscie28:~/ws[garocena@cscie28 ws]$ make
+gcc -Wall    -c -o wsng.o wsng.c
+gcc -Wall    -c -o socklib.o socklib.c
+gcc -Wall -o wsng wsng.o socklib.o
+]0;garocena@cscie28:~/ws[garocena@cscie28 ws]$ ./wsng
+wsng1 started.  host=ec2-3-217-83-153.compute-1.amazonaws.com port=10702
+got a call: request = GET / HTTP/1.1
+got a call: request = GET /dir1/ HTTP/1.1
+got a call: request = GET /dir1/file1.html HTTP/1.1
+got a call: request = GET /dir2/ HTTP/1.1
+got a call: request = GET /dir2/hello.c HTTP/1.1
+got a call: request = GET /dir2/months.html HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi?6 HTTP/1.1
+got a call: request = GET /dir2/picture.jpeg HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi HTTP/1.1
+got a call: request = GET /dir2/hello.cgi HTTP/1.1
+got a call: request = GET /dir2/showpic.cgi HTTP/1.1
+got a call: request = GET /dir3/ HTTP/1.1
+got a call: request = GET /file1.html HTTP/1.1
+got a call: request = GET /file2.txt HTTP/1.1
+got a call: request = GET /file3.jpg HTTP/1.1
+got a call: request = GET /file4.gif HTTP/1.1
+got a call: request = GET /file_list.html HTTP/1.1
+got a call: request = GET /dir1/ HTTP/1.1
+got a call: request = GET /dir1/file1.html HTTP/1.1
+got a call: request = GET /dir2/ HTTP/1.1
+got a call: request = GET /dir2/hello.c HTTP/1.1
+got a call: request = GET /dir2/months.html HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi?3 HTTP/1.1
+got a call: request = GET /dir2/picture.jpeg HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi HTTP/1.1
+got a call: request = GET /dir2/hello.cgi HTTP/1.1
+got a call: request = GET /dir2/showpic.cgi HTTP/1.1
+got a call: request = GET /file1.html HTTP/1.1
+got a call: request = GET /file2.txt HTTP/1.1
+got a call: request = GET /file3.jpg HTTP/1.1
+got a call: request = GET /file4.gif HTTP/1.1
+got a call: request = GET /nox/ HTTP/1.1
+got a call: request = GET /nor/ HTTP/1.1
+got a call: request = GET / HTTP/1.1
+got a call: request = GET /favicon.ico HTTP/1.1
+got a call: request = GET /dir1/ HTTP/1.1
+got a call: request = GET /dir1/file1.html HTTP/1.1
+got a call: request = GET /dir2/ HTTP/1.1
+got a call: request = GET /dir2/hello.c HTTP/1.1
+got a call: request = GET /dir2/months.html HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi?8 HTTP/1.1
+got a call: request = GET /dir2/picture.jpeg HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi HTTP/1.1
+got a call: request = GET /dir2/hello.cgi HTTP/1.1
+got a call: request = GET /dir2/showpic.cgi HTTP/1.1
+got a call: request = GET /dir3/ HTTP/1.1
+got a call: request = GET /file1.html HTTP/1.1
+got a call: request = GET /file2.txt HTTP/1.1
+got a call: request = GET /file3.jpg HTTP/1.1
+got a call: request = GET /file4.gif HTTP/1.1
+got a call: request = GET /file_list.html HTTP/1.1
+got a call: request = GET /dir1/ HTTP/1.1
+got a call: request = GET /dir1/file1.html HTTP/1.1
+got a call: request = GET /dir2/ HTTP/1.1
+got a call: request = GET /dir2/hello.c HTTP/1.1
+got a call: request = GET /dir2/months.html HTTP/1.1
+got a call: request = GET /dir2/picture.jpeg HTTP/1.1
+got a call: request = GET /dir2/showcal.cgi HTTP/1.1
+got a call: request = GET /dir2/hello.cgi HTTP/1.1
+got a call: request = GET /dir2/showpic.cgi HTTP/1.1
+got a call: request = GET /file1.html HTTP/1.1
+got a call: request = GET /file2.txt HTTP/1.1
+got a call: request = GET /file3.jpg HTTP/1.1
+got a call: request = GET /file4.gif HTTP/1.1
+got a call: request = GET /nox/ HTTP/1.1
+got a call: request = GET /nor/ HTTP/1.1
+exit
+^Z
+[1]+  Stopped                 ./wsng
+]0;garocena@cscie28:~/ws[garocena@cscie28 ws]$ exit
+exit
+There are stopped jobs.
+]0;garocena@cscie28:~/ws[garocena@cscie28 ws]$ exit
+exit
+
+Script done on 2020-05-03 03:40:45+0000
