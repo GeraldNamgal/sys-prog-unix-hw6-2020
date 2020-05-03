@@ -5,9 +5,11 @@
 
 /* *
  * wsng
- * 
+ * Implements a web server with a subset of features typically offered by well-
+ * known web browsers but includes being able to list directories, cat files,
+ * and run programs and making GET requests
  * note: builds on 'ws.c' starter code given in assignment instructions; also
- * references timeserv_fork.c from lecture 13 
+ * references timeserv_fork.c from lecture 13
  */
 
 #include	<stdio.h>
@@ -108,7 +110,10 @@ static int active_children = 0;                        // active child processes
 
 /* *
  * main(int ac, char *av[])
- *
+ * purpose: starts up server and socket and then perpetually listens for
+ * requests from clients
+ * args: an optional config filename
+ * rets: exit status
  */
 int
 main(int ac, char *av[])
@@ -184,7 +189,10 @@ void handle_call(int fd)
 }
 
 /* *
- *
+ * cleanup_children()
+ * purpose: remove any defunct ("zombie") child processes
+ * args: none
+ * rets: none
  */ 
 void cleanup_children()
 {
@@ -329,7 +337,10 @@ void process_config_file(char *conf_file, int *portnump)
 }
 
 /* *
- * 
+ * add_to_table( char* extension, char* content )
+ * purpose: adds content types from config file to global struct table/list
+ * args: a file extension and its associated content description
+ * rets: none
  */
 static void add_to_table( char* extension, char* content )
 {
@@ -524,7 +535,10 @@ do_404(char *item, FILE *fp)
 }
 
 /* *
- *
+ * do_500(char *msg, FILE *fp)
+ * purpose: displays code 500 server error
+ * args: message to display, output stream
+ * rets: none
  */
 void
 do_500(char *msg, FILE *fp)
@@ -536,7 +550,10 @@ do_500(char *msg, FILE *fp)
 }
 
 /* *
- *
+ * do_507(char *msg, FILE *fp)
+ * purpose: displays code 507 server error
+ * args: message to display, output stream
+ * rets: none
  */
 void
 do_507(char *msg, FILE *fp)
@@ -550,7 +567,7 @@ do_507(char *msg, FILE *fp)
 /* ------------------------------------------------------ *
    the directory listing section
    isadir() uses stat, not_exist() uses stat
-   do_ls does not actually do the ls command
+   do_ls does not actually call the ls command
    ------------------------------------------------------ */
 
 int
@@ -570,8 +587,13 @@ not_exist(char *f)
 }
 
 /* *
+ * do_ls(char *dir, FILE *fp)
+ * purpose:
  * lists the directory named by 'dir' 
  * sends the listing to the stream at fp
+ * does not actually call the ls() command
+ * args: the directory, and output stream
+ * rets: none
  */
 void
 do_ls(char *dir, FILE *fp)
@@ -640,6 +662,9 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
 
 /* *
  * concat_paths( char* path1, char* path2 )
+ * purpose: utility fxn. Combines a pathname with a subpath to form a new string
+ * args: the pathname, a subpath
+ * rets: the new concatenated pathname 
  */
 static char* concat_paths( char* path1, char* path2 )
 {
@@ -656,6 +681,9 @@ static char* concat_paths( char* path1, char* path2 )
 
 /* *
  * traverseDir( char *pathname, DIR *dir_ptr, FILE* fp )
+ * purpose: lists a directory's contents
+ * args: the directory name, the directory's input stream, output stream
+ * rets: none 
  */
 static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {  
     header(fp, 200, "OK", "text/html");
@@ -718,6 +746,9 @@ ends_in_cgi(char *f)
 
 /* *
  * has_cgi_questmark(char *f)
+ * purpose: checks a string if it contains "cgi?" after a '.'
+ * args: the string
+ * rets: 0 for false, 1 for true
  */
 int has_cgi_questmark(char *f)
 {
@@ -737,6 +768,9 @@ int has_cgi_questmark(char *f)
 
 /* *
  * do_cgi_questmark(char* arg, FILE *fp)
+ * purpose: handle cgi requests of the type with ".cgi?*" at the end
+ * args: the request string received from client, output stream
+ * rets: none
  * note: referenced
  * https://www.geeksforgeeks.org/strtok-strtok_r-functions-c-examples/
  */
@@ -786,7 +820,9 @@ do_exec( char *prog, FILE *fp)
 
 /* ------------------------------------------------------ *
    do_cat(filename,fp)
-   sends back contents after a header
+   purpose: sends back file contents after a header
+   args: the file pathname
+   rets: none
    ------------------------------------------------------ */
 void
 do_cat(char *f, FILE *fpsock)
@@ -864,6 +900,10 @@ void done(int n)
 }
 
 /* *
+ * countDigit(long long n)
+ * purpose: utility fxn to count the number of digits in an int
+ * args: the int
+ * rets: the amount of digits
  * note: referenced
  * https://www.geeksforgeeks.org/program-count-digits-integer-3-different-
  * methods/
