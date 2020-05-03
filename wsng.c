@@ -105,7 +105,7 @@ int has_cgi_questmark(char *f);
 void do_cgi_questmark(char *f, FILE *);
 int countDigit(long long n);
 
-int	mysocket = -1;		                                /* for SIGINT handler */
+int	mysocket = -1;		                        /* for SIGINT handler */
 static int active_children = 0;                        // active child processes
 
 /* *
@@ -153,8 +153,7 @@ main(int ac, char *av[])
  *    rets: child exits with 1 for error, 0 for ok
  *    note: closes fd in parent
  */
-void handle_call(int fd)
-{
+void handle_call(int fd) {
 	int	pid = fork();
 	FILE	*fpin, *fpout;
 	char	request[MAX_RQ_LEN];
@@ -165,8 +164,7 @@ void handle_call(int fd)
 	}
 
 	/* child: buffer socket and talk with client */
-	if ( pid == 0 )
-	{
+	if ( pid == 0 ) {
 		fpin  = fdopen(fd, "r");
 		fpout = fdopen(fd, "w");
 		if ( fpin == NULL || fpout == NULL )
@@ -312,7 +310,7 @@ void process_config_file(char *conf_file, int *portnump)
 	char	param[PARAM_LEN];
 	char	value[MAX_ARGS][VALUE_LEN];
 	int	port;
-	int	read_param(FILE *, char *, int, char [MAX_ARGS][VALUE_LEN], int );
+	int   read_param(FILE *, char *, int, char [MAX_ARGS][VALUE_LEN], int );
 
 	/* open the file */
 	if ( (fp = fopen(conf_file,"r")) == NULL )
@@ -393,10 +391,10 @@ int read_param(FILE *fp, char *name, int nlen, char value[MAX_ARGS][VALUE_LEN]
 	/* read in next line and if the line is too long, read until \n */
 	while( fgets(line, LINELEN, fp) != NULL )
 	{
-		if ( line[strlen(line)-1] != '\n' )
+	if ( line[strlen(line)-1] != '\n' )
 			while( (c = getc(fp)) != '\n' && c != EOF )
 				;
-		if ( sscanf(line, fmt, name, value[0], value[1] ) >= 2 && *name != '#' )
+	if ( sscanf(line, fmt, name, value[0], value[1] ) >= 2 && *name != '#' )
 			return 1;
 	}
 	return EOF;
@@ -599,14 +597,14 @@ not_exist(char *f)
 void
 do_ls(char *dir, FILE *fp)
 {
-	int	fd;                                    	/* file descriptor of stream */
+	int	fd;                              /* file descriptor of stream */
 
 	fd = fileno(fp);
 	dup2(fd,1);
 	dup2(fd,2);
 
     struct stat info;
-	if ( stat( dir, &info ) == -1 && errno == ENOENT ) {       // doesn't exist?
+	if ( stat( dir, &info ) == -1 && errno == ENOENT ) {   // doesn't exist?
         char str[MAX_RQ_LEN * 2];
         sprintf(str, "Directory doesn't exist '%s': %s\n",dir, strerror(errno));
         do_500( str, fp );
@@ -635,7 +633,7 @@ static void do_get_rules( char* pathname, DIR *dir_ptr, FILE* fp ) {
     int found_index_html = 0;
     int found_index_cgi = 0;
     char* new_path = NULL;    
-    struct dirent *direntp;		                                   // each entry
+    struct dirent *direntp;		                           // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL )    // search 'index.html'
         if ( strcmp( "index.html", direntp->d_name ) == 0 ) {
             found_index_html = 1;
@@ -699,7 +697,7 @@ static void traverseDir( char *pathname, DIR *dir_ptr, FILE* fp ) {
     fprintf(fp, "<table style=\"padding:2.5px 0 0 0;\">");
     fprintf(fp, "<tr><th %s>NAME</th><th %s>", pad, pad);
     fprintf(fp, "LAST MODIFIED (UTC)</th><th %s>SIZE</th></tr>", pad);    
-    struct dirent *direntp;		                                   // each entry
+    struct dirent *direntp;		                           // each entry
     while ( ( direntp = readdir( dir_ptr ) ) != NULL ) {         // traverse dir        
         if (strcmp( direntp->d_name, "." ) != 0
            && strcmp( direntp->d_name, ".." ) != 0) {       // skip "." and ".."                                                                  
