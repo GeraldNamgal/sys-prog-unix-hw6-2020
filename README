@@ -1,0 +1,25 @@
+Gerald Arocena
+CSCI E-28, Spring 2020
+5-2-2020
+README for hw 6
+
+"In this file put a list of the files you are submitting with
+a brief (four to ten words) description of each one." --
+
+- Makefile            <-- the Makefile needed to run the program 
+- Plan                <-- the plan for how my program will be implemented
+- wsng.c              <-- the main program
+- socklib.c           <-- contains functions for client/server programs
+- socklib.h           <-- header file for socklib.c
+- wsng.conf           <-- web server configuration file for wsng.c
+
+"Also put any notes to the grader." --
+
+    - To compile wsng, navigate to the directory with wsng.c and run "make" at
+      the command line. Then to run it, the usage is "./wsng [-c CONFIG FILE]".
+    - Besides adding the 500 server code error, I also added the 507 error per
+      the HW questions
+    - I added one more CGI environment variable in main() per the HW questions
+    - I did not implement the error log from the last HW question
+
+

@@ -1,6 +1,6 @@
 // Gerald Arocena
 // CSCI E-28, Spring 2020
-// 
+// 5-2-2020
 // hw 6
 
 /* *
@@ -193,6 +193,7 @@ void handle_call(int fd)
  * purpose: remove any defunct ("zombie") child processes
  * args: none
  * rets: none
+ * note: references timeserv_fork.c from lecture 13
  */ 
 void cleanup_children()
 {
@@ -604,10 +605,16 @@ do_ls(char *dir, FILE *fp)
 	dup2(fd,1);
 	dup2(fd,2);
 
+    struct stat info;
+	if ( stat( dir, &info ) == -1 && errno == ENOENT ) {       // doesn't exist?
+        char str[MAX_RQ_LEN * 2];
+        sprintf(str, "Directory doesn't exist '%s': %s\n",dir, strerror(errno));
+        do_500( str, fp );
+        return;
+    }
     DIR	*dir_ptr;
-
-    if ( ( dir_ptr = opendir( dir ) ) == NULL ) {              // cannot opendir
-        char str[MAX_RQ_LEN];
+    if ( ( dir_ptr = opendir( dir ) ) == NULL ) {             // cannot opendir?
+        char str[MAX_RQ_LEN * 2];
         sprintf(str, "Cannot read directory '%s': %s\n", dir, strerror(errno));
         do_500( str, fp );
         return;

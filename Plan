@@ -1,0 +1,83 @@
+Gerald Arocena
+CSCI E-28, Spring 2020
+5-2-2020
+Plan for hw 6
+
+Purpose:
+
+The purpose of wsng is to expand on the ws.c implementation from lecture which
+implements a web server with a subset of features typically offered in well-
+known client/server programs. wsng will expand on ws.c to include enhanced
+features per the HW instructions.
+
+Outline:
+
+Like other web servers, wsng can list directories, cat files, and run programs.
+In addition, wsng only handles GET requests, a few server code errors, a few CGI
+environment variables, and uses the CGI filename extension method to run
+programs.
+
+Interface:
+
+    The command line syntax is shown below:
+
+        ./wsng [-c CONFIG FILENAME]         starts the web server
+
+    When run, verification information that the server is running will be
+    printed to stdout and the user can then connect to the server from a client
+    to browse the site.
+
+Data Structures:
+
+For my implementation of wsng, I used a linked list made up of a struct I
+created called file_info. file_info contains a file extension for content types
+and their associated content information. This was to address the table-driven
+requirement from the HW instructions where we needed to store content type
+information from the config file. I also used struct stat to retrieve file and
+directory information, and struct dirent to read directories. A struct hostent
+was also used to get the host name.
+
+Program Flow:
+
+1. Set up server and socket.
+2. Listen for client request.
+3. Handle client request.
+4. Clean up child processes (periodically).
+5. Repeat steps 2 to 4.
+
+Algorithm:
+
+wsng employs a table-driven approach which allows for looking up information in
+a table rather than using superfluous 'if' statements. Table-driven programming
+allows for easy modification and flexibility. Instead of using if statements to
+identify and handle settings such as the content types in the server config
+file, wsng traverses the struct linked list / table to find the information it
+needs in its entries to start up the web server. wsng also makes use of fork()
+to hand off processing of requests to child processes.
+
+Error Handling:
+
+    Program errors that are flagged include:
+
+        [1] When functions fail, e.g, socket functions, fork(), stat(), malloc()
+        [2] When invalid argument syntax is inputted
+        [3] When a directory doesn't exist or is unreadable
+        [4] When a 400, 501, 404, 500, or 507 server code error occurs
+
+Layering:
+
+    main() in wsng.c calls:
+        startup()            -- starts up server and returns a socket
+        accept()             -- accepts a client request
+        handle_call()        -- parses a request and calls process_rq()
+    
+    process_rq() in wsng.c calls:
+        do_ls()              -- handles directory requests
+        do_exec()            -- runs '.cgi' requests
+        do_cat               -- cats a file request
+
+File Structure:
+
+    wsng.c               -- the functions listed above
+
+    
